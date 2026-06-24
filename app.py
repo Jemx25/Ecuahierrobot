@@ -905,7 +905,6 @@ def obtener_respuesta(mensaje, numero_usuario):
                     f"Hemos recibido tu compra por un total de *${total:.2f}*.\n"
                     f"📦 Productos:\n{formatear_carrito(carrito)}\n\n"
                     f"📞 Un asesor de Ecuahierro se comunicará contigo para coordinar el pago y la entrega.\n"
-                    f"También puedes llamarnos al *+593 3-296-4202*.\n\n"
                     f"¡Gracias por tu compra, {nombre_cliente}! 🙌\n"
                     f"¿Necesitas algo más?" + pie_navegacion())
 
