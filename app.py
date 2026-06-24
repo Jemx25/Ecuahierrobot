@@ -1,9 +1,8 @@
 """
-Chatbot para Ecuahierro (Riobamba)
+Chatbot para Ecuahierro con carrito de compras y navegación persistente
 - WhatsApp Business API (Twilio Sandbox)
-- Base de datos de productos con precios referenciales
-- Flujo: Saludo → Nombre → Consulta de productos → Compra
-- Sin página web, todo por chat
+- Carrito de compras integrado
+- Comandos: menú, carrito, vaciar, checkout, dirección, horario, asesor
 """
 
 from flask import Flask, request, Response
@@ -13,7 +12,7 @@ import re
 app = Flask(__name__)
 
 # ============================================================
-# 1. BASE DE DATOS DE PRODUCTOS (ampliada)
+# 1. BASE DE DATOS DE PRODUCTOS (igual que antes)
 # ============================================================
 
 PRODUCTOS = {
@@ -36,12 +35,12 @@ PRODUCTOS = {
     "estribos": {
         "nombre": "Estribos (Novacero)",
         "unidad": "Unidad",
-        "precio": 2.25  # promedio
+        "precio": 2.25
     },
     "malla electrosoldada": {
         "nombre": "Malla Electrosoldada (Novacero)",
         "unidad": "Rollo/Plancha",
-        "precio": 47.50  # promedio
+        "precio": 47.50
     },
     "alambre amarre": {
         "nombre": "Alambre de Amarre (Novacero)",
@@ -73,7 +72,6 @@ PRODUCTOS = {
         "unidad": "Kilo (kg)",
         "precio": 2.50
     },
-
     # --- Bloques y prefabricados ---
     "bloque": {
         "nombre": "Bloque de Hormigón (20x40x20 cm)",
@@ -103,9 +101,8 @@ PRODUCTOS = {
     "tubo hormigon": {
         "nombre": "Tubo de Hormigón",
         "unidad": "Unidad",
-        "precio": 27.50  # promedio
+        "precio": 27.50
     },
-
     # --- Herramientas manuales ---
     "martillo": {
         "nombre": "Martillo",
@@ -135,17 +132,17 @@ PRODUCTOS = {
     "nivel": {
         "nombre": "Nivel de Burbuja",
         "unidad": "Unidad",
-        "precio": 11.50  # promedio
+        "precio": 11.50
     },
     "flexometro": {
         "nombre": "Flexómetro",
         "unidad": "Unidad",
-        "precio": 6.50  # promedio 5m/8m
+        "precio": 6.50
     },
     "escuadra": {
         "nombre": "Escuadra",
         "unidad": "Unidad",
-        "precio": 5.50  # promedio
+        "precio": 5.50
     },
     "serrucho": {
         "nombre": "Serrucho",
@@ -197,27 +194,26 @@ PRODUCTOS = {
         "unidad": "Unidad",
         "precio": 8.00
     },
-
     # --- Herramientas eléctricas ---
     "amoladora": {
         "nombre": "Amoladora (4 1/2'')",
         "unidad": "Unidad",
-        "precio": 57.50  # promedio
+        "precio": 57.50
     },
     "rotomartillo": {
         "nombre": "Rotomartillo",
         "unidad": "Unidad",
-        "precio": 115.00  # promedio
+        "precio": 115.00
     },
     "taladro": {
         "nombre": "Taladro",
         "unidad": "Unidad",
-        "precio": 70.00  # promedio
+        "precio": 70.00
     },
     "sierra circular": {
         "nombre": "Sierra Circular",
         "unidad": "Unidad",
-        "precio": 90.00  # promedio
+        "precio": 90.00
     },
     "caladora": {
         "nombre": "Caladora",
@@ -227,24 +223,23 @@ PRODUCTOS = {
     "esmeril": {
         "nombre": "Esmeril de Banco",
         "unidad": "Unidad",
-        "precio": 67.50  # promedio
+        "precio": 67.50
     },
     "compresor": {
         "nombre": "Compresor de Aire",
         "unidad": "Unidad",
-        "precio": 225.00  # promedio
+        "precio": 225.00
     },
     "pistola clavos": {
         "nombre": "Pistola de Clavos",
         "unidad": "Unidad",
-        "precio": 115.00  # promedio
+        "precio": 115.00
     },
-
     # --- Accesorios para herramientas ---
     "disco corte": {
         "nombre": "Disco de Corte (4 1/2'')",
         "unidad": "Unidad",
-        "precio": 3.00  # promedio
+        "precio": 3.00
     },
     "disco desbaste": {
         "nombre": "Disco de Desbaste",
@@ -254,7 +249,7 @@ PRODUCTOS = {
     "broca concreto": {
         "nombre": "Broca para Concreto (SDS Plus)",
         "unidad": "Unidad",
-        "precio": 10.00  # promedio
+        "precio": 10.00
     },
     "broca metal": {
         "nombre": "Broca para Metal (HSS)",
@@ -284,14 +279,13 @@ PRODUCTOS = {
     "punta rotomartillo": {
         "nombre": "Punta para Rotomartillo",
         "unidad": "Unidad",
-        "precio": 8.00  # promedio
+        "precio": 8.00
     },
-
     # --- Ferretería general ---
     "pernos": {
         "nombre": "Pernos y Tuercas",
         "unidad": "Unidad/Kilo",
-        "precio": 1.00  # promedio
+        "precio": 1.00
     },
     "arandelas": {
         "nombre": "Arandelas",
@@ -311,12 +305,12 @@ PRODUCTOS = {
     "bisagras": {
         "nombre": "Bisagras",
         "unidad": "Unidad",
-        "precio": 3.00  # promedio
+        "precio": 3.00
     },
     "cerraduras": {
         "nombre": "Cerraduras",
         "unidad": "Unidad",
-        "precio": 16.50  # promedio
+        "precio": 16.50
     },
     "pasadores": {
         "nombre": "Pasadores",
@@ -331,9 +325,8 @@ PRODUCTOS = {
     "candados": {
         "nombre": "Candados",
         "unidad": "Unidad",
-        "precio": 6.50  # promedio
+        "precio": 6.50
     },
-
     # --- Tuberías, grifería y plomería ---
     "tuberia pvc": {
         "nombre": "Tubería PVC (presión) - Eternit",
@@ -353,7 +346,7 @@ PRODUCTOS = {
     "tubo estructural": {
         "nombre": "Tubo Estructural (cuadrado/rectangular) - Adelca",
         "unidad": "Tubo (6m)",
-        "precio": 30.00  # promedio
+        "precio": 30.00
     },
     "tubo cobre": {
         "nombre": "Tubo para Gas (cobre)",
@@ -363,7 +356,7 @@ PRODUCTOS = {
     "codo pvc": {
         "nombre": "Codo PVC - Eternit",
         "unidad": "Unidad",
-        "precio": 2.00  # promedio
+        "precio": 2.00
     },
     "tee pvc": {
         "nombre": "Tee PVC - Eternit",
@@ -420,7 +413,6 @@ PRODUCTOS = {
         "unidad": "Unidad",
         "precio": 4.50
     },
-
     # --- Cubiertas, techos y acabados ---
     "teja fibrocemento": {
         "nombre": "Teja de Fibrocemento (ondulada) - Eternit",
@@ -467,7 +459,6 @@ PRODUCTOS = {
         "unidad": "Unidad",
         "precio": 8.50
     },
-
     # --- Pinturas y acabados ---
     "pintura esmalte": {
         "nombre": "Pintura Esmalte - Kubiec",
@@ -529,7 +520,6 @@ PRODUCTOS = {
         "unidad": "Unidad",
         "precio": 1.00
     },
-
     # --- Equipo de seguridad ---
     "casco": {
         "nombre": "Casco de Seguridad",
@@ -586,7 +576,6 @@ PRODUCTOS = {
         "unidad": "Unidad",
         "precio": 12.50
     },
-
     # --- Metalmecánica y estructuras metálicas ---
     "perfil estructural": {
         "nombre": "Perfil Estructural (viga/columna) - Novacero/Adelca",
@@ -633,7 +622,6 @@ PRODUCTOS = {
         "unidad": "Rollo",
         "precio": 35.00
     },
-
     # --- Otros productos ---
     "cemento": {
         "nombre": "Cemento (Chimborazo)",
@@ -723,25 +711,23 @@ PRODUCTOS = {
 }
 
 # ============================================================
-# 2. ESTADO DE USUARIOS (en memoria)
+# 2. ESTADO DE USUARIOS
 # ============================================================
 # Cada usuario guarda:
-#   - 'nombre': str
-#   - 'paso': str  (None, 'esperando_nombre', 'menu', 'compra_cantidad', 'compra_datos', 'compra_confirmar')
-#   - 'producto_actual': dict  (producto que está comprando)
-#   - 'carrito': list  (para futura expansión)
-#   - 'ultimo_mensaje': str
+#   - nombre: str
+#   - paso: str (None, 'esperando_nombre', 'menu', 'agregando_cantidad', 'checkout_datos', 'checkout_confirmar')
+#   - carrito: list de dict con {clave, nombre, cantidad, precio_unitario, unidad}
+#   - producto_actual: dict (para agregar al carrito)
+#   - datos_cliente: dict (nombre, direccion, telefono)
 
 estados_usuarios = {}
 
 # ============================================================
-# 3. FUNCIONES DE PROCESAMIENTO
+# 3. FUNCIONES AUXILIARES
 # ============================================================
 
 def normalizar_texto(texto):
-    """Elimina espacios extras, convierte a minúsculas y quita tildes básicas."""
     texto = texto.strip().lower()
-    # Reemplazar tildes comunes
     reemplazos = {
         'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
         'Á': 'a', 'É': 'e', 'Í': 'i', 'Ó': 'o', 'Ú': 'u'
@@ -751,205 +737,200 @@ def normalizar_texto(texto):
     return texto
 
 def buscar_producto(mensaje):
-    """
-    Busca si el mensaje contiene alguna clave de producto.
-    Devuelve (clave_encontrada, producto) o (None, None)
-    """
     mensaje_norm = normalizar_texto(mensaje)
-    # Ordenar claves por longitud (para que "varilla quintal" tenga prioridad sobre "varilla")
     claves = sorted(PRODUCTOS.keys(), key=len, reverse=True)
     for clave in claves:
         if clave in mensaje_norm:
             return clave, PRODUCTOS[clave]
     return None, None
 
-def formatear_producto(clave, producto):
-    """Devuelve un mensaje bonito con la información del producto."""
-    return (f"📏 *{producto['nombre']}*\n"
-            f"   - Unidad: {producto['unidad']}\n"
-            f"   - Precio: ${producto['precio']:.2f}\n\n"
-            f"¿Quieres comprar? Responde *'comprar {clave}'* para iniciar el pedido.")
+def formatear_carrito(carrito):
+    if not carrito:
+        return "🛒 *Carrito vacío*"
+    lineas = []
+    total = 0.0
+    for i, item in enumerate(carrito, 1):
+        subtotal = item['cantidad'] * item['precio_unitario']
+        total += subtotal
+        lineas.append(f"{i}. {item['nombre']} - {item['cantidad']} {item['unidad']} = ${subtotal:.2f}")
+    lineas.append(f"\n*Total: ${total:.2f}*")
+    return "\n".join(lineas)
+
+def pie_navegacion():
+    return ("\n---\n📌 *Comandos:* 'menú' | 'carrito' | 'vaciar' | 'checkout'")
+
+def mensaje_menu_principal(nombre):
+    return (f"¡Hola de nuevo, {nombre}! 👋\n\n"
+            "Puedes escribir el nombre de un producto (ej. 'varilla') para ver su precio.\n"
+            "Para agregar al carrito: *'comprar [producto]'*\n\n"
+            "📌 Comandos disponibles:\n"
+            "• *carrito* - Ver tu pedido\n"
+            "• *vaciar* - Vaciar carrito\n"
+            "• *checkout* - Finalizar compra\n"
+            "• *dirección* - Dónde estamos\n"
+            "• *horario* - Horarios de atención\n"
+            "• *asesor* - Hablar con un vendedor")
+
+# ============================================================
+# 4. LÓGICA PRINCIPAL
+# ============================================================
 
 def obtener_respuesta(mensaje, numero_usuario):
-    """
-    Función principal que procesa el mensaje y devuelve la respuesta del bot.
-    """
     mensaje_norm = normalizar_texto(mensaje)
     estado = estados_usuarios.get(numero_usuario, {})
     paso = estado.get('paso', None)
 
-    # ============================================================
-    # CASO 1: PRIMERA VEZ - SIN NOMBRE REGISTRADO
-    # ============================================================
+    # --- PRIMERA VEZ: pedir nombre ---
     if not estado.get('nombre'):
-        # Si el usuario ya había iniciado pero no dio nombre, preguntamos
         if paso == 'esperando_nombre':
             nombre = mensaje.strip()
             if len(nombre) < 2:
                 return "Por favor, escríbeme tu nombre completo para poder ayudarte mejor."
-            # Guardar nombre
             estado['nombre'] = nombre.title()
             estado['paso'] = 'menu'
+            estado['carrito'] = []
             estados_usuarios[numero_usuario] = estado
             return (f"¡Encantado de conocerte, {nombre.title()}! 🤝\n\n"
                     "Soy el asistente virtual de *Ecuahierro*.\n"
-                    "Puedes escribir el nombre de cualquier producto (ej. 'varilla', 'cemento', 'pintura') y te daré su precio y unidad de venta.\n\n"
-                    "También puedes usar estos comandos:\n"
-                    "📍 *dirección* - Dónde estamos\n"
-                    "🕒 *horario* - Horarios de atención\n"
-                    "💬 *asesor* - Hablar con un vendedor\n"
-                    "🛒 *carrito* - Ver tu pedido (próximamente)\n\n"
+                    "Puedes escribir el nombre de cualquier producto para ver su precio y agregarlo al carrito.\n\n"
+                    "📌 *Comandos básicos:*\n"
+                    "• 'comprar [producto]' → agregar al carrito\n"
+                    "• 'carrito' → ver tu pedido\n"
+                    "• 'checkout' → finalizar compra\n"
+                    "• 'dirección', 'horario', 'asesor' → información de la empresa\n\n"
                     "¿En qué te ayudo hoy?")
         else:
-            # Primera interacción
             estado['paso'] = 'esperando_nombre'
             estados_usuarios[numero_usuario] = estado
-            return ("¡Hola! Bienvenido a *Ecuahierro* 🏗️\n\n"
-                    "Somos tu ferretería de confianza en Riobamba con más de 45 años de experiencia.\n"
+            return ("¡Hola! Bienvenido a *Ecuahierro* 🏗️\n"
+                    "Somos tu ferretería de confianza en Riobamba.\n"
                     "Para empezar, ¿me podrías decir tu nombre?")
 
-    # ============================================================
-    # CASO 2: COMPRA EN PROCESO
-    # ============================================================
-    if paso == 'compra_cantidad':
-        # Esperamos que el usuario escriba un número (cantidad)
-        try:
-            cantidad = float(mensaje_norm.replace(',', '.'))
-            if cantidad <= 0:
-                raise ValueError("Cantidad debe ser positiva")
-        except:
-            return ("Por favor, escribe una cantidad válida (ej. '5', '3.5').\n"
-                    "Si quieres cancelar la compra, escribe *'cancelar'*.")
-
-        producto_actual = estado.get('producto_actual')
-        if not producto_actual:
-            # Si por error no hay producto, reiniciamos al menú
-            estado['paso'] = 'menu'
-            estados_usuarios[numero_usuario] = estado
-            return "Parece que hubo un error. Vuelve a escribir el producto que deseas comprar."
-
-        # Calcular total
-        precio_unitario = producto_actual['precio']
-        total = cantidad * precio_unitario
-        nombre_producto = producto_actual['nombre']
-        unidad = producto_actual['unidad']
-
-        # Guardar datos en estado
-        estado['cantidad'] = cantidad
-        estado['total'] = total
-        estado['paso'] = 'compra_datos'
-        estados_usuarios[numero_usuario] = estado
-
-        return (f"✅ *Resumen de tu pedido*\n"
-                f"   Producto: {nombre_producto}\n"
-                f"   Cantidad: {cantidad} {unidad}\n"
-                f"   Precio unitario: ${precio_unitario:.2f}\n"
-                f"   *Total: ${total:.2f}*\n\n"
-                f"Para confirmar, necesito tus datos:\n"
-                f"   - Tu nombre completo\n"
-                f"   - Dirección de entrega\n"
-                f"   - Teléfono de contacto\n\n"
-                f"Escríbemelos en un solo mensaje, separados por comas.\n"
-                f"Ejemplo: 'Juan Pérez, Av. 10 de Agosto 123, 0987654321'\n"
-                f"O escribe *'cancelar'* para anular la compra.")
-
-    if paso == 'compra_datos':
+    # --- FLUJO DE AGREGAR CANTIDAD AL CARRITO ---
+    if paso == 'agregando_cantidad':
         if mensaje_norm == 'cancelar':
             estado['paso'] = 'menu'
             estado.pop('producto_actual', None)
-            estado.pop('cantidad', None)
-            estado.pop('total', None)
             estados_usuarios[numero_usuario] = estado
-            return "🔄 Compra cancelada. Puedes seguir consultando productos o usar los comandos de ayuda."
+            return "🔄 Operación cancelada. Volviendo al menú principal." + pie_navegacion()
 
-        # Extraer datos (nombre, dirección, teléfono)
+        try:
+            cantidad = float(mensaje_norm.replace(',', '.'))
+            if cantidad <= 0:
+                raise ValueError
+        except:
+            return ("Por favor, escribe una cantidad válida (ej. '5', '3.5').\n"
+                    "O escribe *'cancelar'* para volver al menú.")
+
+        producto_actual = estado.get('producto_actual')
+        if not producto_actual:
+            estado['paso'] = 'menu'
+            estados_usuarios[numero_usuario] = estado
+            return "Error. Vuelve a intentarlo desde el menú." + pie_navegacion()
+
+        # Agregar al carrito
+        carrito = estado.get('carrito', [])
+        item = {
+            'clave': producto_actual.get('clave', ''),
+            'nombre': producto_actual['nombre'],
+            'cantidad': cantidad,
+            'precio_unitario': producto_actual['precio'],
+            'unidad': producto_actual['unidad']
+        }
+        carrito.append(item)
+        estado['carrito'] = carrito
+        estado['paso'] = 'menu'
+        estado.pop('producto_actual', None)
+        estados_usuarios[numero_usuario] = estado
+
+        total = sum(i['cantidad'] * i['precio_unitario'] for i in carrito)
+        return (f"✅ *Agregado al carrito:* {cantidad} {producto_actual['unidad']} de {producto_actual['nombre']}\n"
+                f"Subtotal: ${cantidad * producto_actual['precio']:.2f}\n\n"
+                f"📦 *Carrito actual:*\n{formatear_carrito(carrito)}\n"
+                f"Total: ${total:.2f}" + pie_navegacion())
+
+    # --- FLUJO DE CHECKOUT (DATOS) ---
+    if paso == 'checkout_datos':
+        if mensaje_norm == 'cancelar':
+            estado['paso'] = 'menu'
+            estado.pop('carrito', None)
+            estados_usuarios[numero_usuario] = estado
+            return "🔄 Compra cancelada. El carrito se ha vaciado." + pie_navegacion()
+
         partes = [p.strip() for p in mensaje.split(',')]
         if len(partes) < 3:
             return ("Por favor, proporciona los tres datos separados por comas:\n"
                     "Ejemplo: 'Juan Pérez, Av. 10 de Agosto 123, 0987654321'\n"
-                    "O escribe *'cancelar'* para anular la compra.")
+                    "O escribe *'cancelar'* para cancelar la compra.")
 
         nombre_cliente = partes[0].title()
         direccion = partes[1].title()
         telefono = partes[2].strip()
 
-        # Guardar datos
-        estado['cliente_nombre'] = nombre_cliente
-        estado['cliente_direccion'] = direccion
-        estado['cliente_telefono'] = telefono
-        estado['paso'] = 'compra_confirmar'
+        estado['datos_cliente'] = {
+            'nombre': nombre_cliente,
+            'direccion': direccion,
+            'telefono': telefono
+        }
+        estado['paso'] = 'checkout_confirmar'
         estados_usuarios[numero_usuario] = estado
 
-        producto_actual = estado.get('producto_actual')
-        cantidad = estado.get('cantidad')
-        total = estado.get('total')
+        carrito = estado.get('carrito', [])
+        if not carrito:
+            return "⚠️ Tu carrito está vacío. Agrega productos primero." + pie_navegacion()
 
+        total = sum(i['cantidad'] * i['precio_unitario'] for i in carrito)
+        resumen = formatear_carrito(carrito)
         return (f"📋 *Confirmación de pedido*\n\n"
-                f"Producto: {producto_actual['nombre']}\n"
-                f"Cantidad: {cantidad} {producto_actual['unidad']}\n"
-                f"Total: ${total:.2f}\n\n"
-                f"Cliente: {nombre_cliente}\n"
-                f"Dirección: {direccion}\n"
-                f"Teléfono: {telefono}\n\n"
-                f"¿Confirmas este pedido? Responde *'confirmar'* o *'cancelar'*.")
+                f"{resumen}\n\n"
+                f"👤 Cliente: {nombre_cliente}\n"
+                f"📍 Dirección: {direccion}\n"
+                f"📞 Teléfono: {telefono}\n\n"
+                f"¿Confirmas? Responde *'confirmar'* o *'cancelar'*.")
 
-    if paso == 'compra_confirmar':
+    if paso == 'checkout_confirmar':
         if mensaje_norm == 'confirmar':
-            # Aquí se podría enviar una notificación a Ecuahierro (ej. correo, webhook)
-            # Por simplicidad, solo damos el mensaje final
-            nombre_cliente = estado.get('cliente_nombre', 'Cliente')
-            producto_actual = estado.get('producto_actual')
-            cantidad = estado.get('cantidad')
-            total = estado.get('total')
-            direccion = estado.get('cliente_direccion', '')
-            telefono = estado.get('cliente_telefono', '')
+            carrito = estado.get('carrito', [])
+            total = sum(i['cantidad'] * i['precio_unitario'] for i in carrito)
+            datos = estado.get('datos_cliente', {})
+            nombre_cliente = datos.get('nombre', 'Cliente')
 
-            # Limpiar estado de compra, pero mantener el nombre
+            # Limpiar estado (mantener nombre)
             estado['paso'] = 'menu'
-            estado.pop('producto_actual', None)
-            estado.pop('cantidad', None)
-            estado.pop('total', None)
-            estado.pop('cliente_nombre', None)
-            estado.pop('cliente_direccion', None)
-            estado.pop('cliente_telefono', None)
+            estado['carrito'] = []
+            estado.pop('datos_cliente', None)
             estados_usuarios[numero_usuario] = estado
 
             return (f"✅ *¡Pedido confirmado!*\n\n"
-                    f"Hemos recibido tu compra:\n"
-                    f"- Producto: {producto_actual['nombre']}\n"
-                    f"- Cantidad: {cantidad} {producto_actual['unidad']}\n"
-                    f"- Total: ${total:.2f}\n"
-                    f"- Entrega en: {direccion}\n"
-                    f"- Contacto: {telefono}\n\n"
+                    f"Hemos recibido tu compra por un total de *${total:.2f}*.\n"
+                    f"📦 Productos:\n{formatear_carrito(carrito)}\n\n"
                     f"📞 Un asesor de Ecuahierro se comunicará contigo para coordinar el pago y la entrega.\n"
+                    f"También puedes llamarnos al *+593 3-296-4202*.\n\n"
                     f"¡Gracias por tu compra, {nombre_cliente}! 🙌\n"
-                    f"¿Necesitas algo más? Puedes seguir consultando productos.")
+                    f"¿Necesitas algo más?" + pie_navegacion())
 
         elif mensaje_norm == 'cancelar':
             estado['paso'] = 'menu'
-            estado.pop('producto_actual', None)
-            estado.pop('cantidad', None)
-            estado.pop('total', None)
-            estado.pop('cliente_nombre', None)
-            estado.pop('cliente_direccion', None)
-            estado.pop('cliente_telefono', None)
+            estado['carrito'] = []
+            estado.pop('datos_cliente', None)
             estados_usuarios[numero_usuario] = estado
-            return "🔄 Compra cancelada. ¿En qué más puedo ayudarte?"
+            return "🔄 Compra cancelada. El carrito se ha vaciado." + pie_navegacion()
 
         else:
-            return "Por favor, responde *'confirmar'* para aceptar el pedido o *'cancelar'* para anularlo."
+            return "Por favor, responde *'confirmar'* o *'cancelar'*."
 
-    # ============================================================
-    # CASO 3: MENÚ PRINCIPAL (comandos y búsqueda de productos)
-    # ============================================================
-    # Comandos especiales
+    # --- MENÚ PRINCIPAL (comandos y búsquedas) ---
+    # Verificar comandos especiales
+    if mensaje_norm in ['menú', 'menu', 'ayuda', 'hola', 'buenos dias', 'buenas tardes']:
+        return mensaje_menu_principal(estado['nombre']) + pie_navegacion()
+
     if mensaje_norm in ['dirección', 'direccion']:
         return ("📍 *Dirección de Ecuahierro*\n\n"
                 "📌 *Ecuahierro Centro*\n"
                 "   Eugenio Espejo 27-19 y Junín, Riobamba\n\n"
                 "📌 *Ecuahierro Sur*\n"
                 "   (Nueva sucursal)\n\n"
-                "¡Te esperamos! 🏬")
+                "¡Te esperamos!" + pie_navegacion())
 
     if mensaje_norm in ['horario', 'horarios']:
         return ("🕒 *Horarios de atención*\n\n"
@@ -960,78 +941,90 @@ def obtener_respuesta(mensaje, numero_usuario):
                 "   8:00 AM – 1:00 PM\n"
                 "   2:30 PM – 5:00 PM\n\n"
                 "📅 *Domingo*\n"
-                "   Cerrado\n\n"
-                "¡Ven a visitarnos! 🛠️")
+                "   Cerrado" + pie_navegacion())
 
     if mensaje_norm in ['asesor', 'vendedor', 'hablar', 'contacto']:
         return ("💬 *Hablar con un asesor*\n\n"
                 "📞 Llámanos al: *+593 3-296-4202*\n"
                 "📍 Visítanos en: Eugenio Espejo 27-19 y Junín, Riobamba\n\n"
-                "Nuestros vendedores están capacitados para ayudarte con tus proyectos. ¡No dudes en contactarnos! 🤝")
+                "Nuestros vendedores están listos para ayudarte." + pie_navegacion())
 
-    if mensaje_norm in ['menu', 'ayuda', 'hola', 'buenos dias', 'buenas tardes']:
-        return (f"¡Hola de nuevo, {estado['nombre']}! 👋\n\n"
-                "Recuerda que puedes:\n"
-                "• Escribir el nombre de un producto para ver su precio.\n"
-                "• Usar comandos: *dirección*, *horario*, *asesor*.\n"
-                "• Si quieres comprar, escribe *'comprar [producto]'*.\n\n"
-                "¿Qué necesitas?")
+    # --- Comandos del carrito ---
+    if mensaje_norm == 'carrito':
+        carrito = estado.get('carrito', [])
+        if not carrito:
+            return "🛒 *Carrito vacío*. Agrega productos con 'comprar [producto]'." + pie_navegacion()
+        return f"📦 *Tu carrito:*\n\n{formatear_carrito(carrito)}" + pie_navegacion()
 
-    # Búsqueda de productos por nombre
+    if mensaje_norm == 'vaciar':
+        estado['carrito'] = []
+        estados_usuarios[numero_usuario] = estado
+        return "🗑️ *Carrito vaciado*." + pie_navegacion()
+
+    if mensaje_norm in ['checkout', 'finalizar']:
+        carrito = estado.get('carrito', [])
+        if not carrito:
+            return "⚠️ No hay productos en el carrito. Agrega algunos primero." + pie_navegacion()
+        estado['paso'] = 'checkout_datos'
+        estados_usuarios[numero_usuario] = estado
+        total = sum(i['cantidad'] * i['precio_unitario'] for i in carrito)
+        return (f"🛒 *Iniciando finalización de compra*\n\n"
+                f"Resumen:\n{formatear_carrito(carrito)}\n"
+                f"*Total: ${total:.2f}*\n\n"
+                f"Por favor, proporciona tus datos en este formato:\n"
+                f"*Nombre completo, Dirección de entrega, Teléfono*\n"
+                f"Ejemplo: 'Juan Pérez, Av. 10 de Agosto 123, 0987654321'\n"
+                f"O escribe *'cancelar'* para anular.")
+
+    # --- Agregar al carrito: "comprar [producto]" ---
     if mensaje_norm.startswith('comprar '):
-        # Intento de compra directa: "comprar varilla"
         termino = mensaje_norm.replace('comprar ', '').strip()
+        if not termino:
+            return "Debes especificar un producto. Ejemplo: 'comprar varilla'" + pie_navegacion()
         clave, producto = buscar_producto(termino)
         if clave:
-            # Iniciar proceso de compra
-            estado['paso'] = 'compra_cantidad'
+            estado['paso'] = 'agregando_cantidad'
+            producto['clave'] = clave  # para referencia
             estado['producto_actual'] = producto
             estados_usuarios[numero_usuario] = estado
-            return (f"🛒 *Iniciando compra de {producto['nombre']}*\n\n"
+            return (f"🛒 *Agregar {producto['nombre']}*\n\n"
                     f"Precio unitario: ${producto['precio']:.2f} por {producto['unidad']}\n"
-                    f"¿Cuántas unidades deseas comprar? (Escribe un número)")
+                    f"¿Cuántas unidades deseas agregar? (Escribe un número)\n"
+                    f"O escribe *'cancelar'* para volver al menú.")
         else:
-            return ("No encontré ese producto. Por favor, verifica el nombre o escribe solo el producto sin 'comprar'.\n"
-                    "Ejemplo: *varilla*, *cemento*, *pintura*.")
+            return f"No encontré el producto '{termino}'. Verifica el nombre." + pie_navegacion()
 
-    # Buscar producto normal (sin "comprar")
+    # --- Búsqueda normal de productos ---
     clave, producto = buscar_producto(mensaje)
     if clave:
-        # Mostrar información del producto y sugerir compra
-        return formatear_producto(clave, producto)
+        return (f"📏 *{producto['nombre']}*\n"
+                f"   - Unidad: {producto['unidad']}\n"
+                f"   - Precio: ${producto['precio']:.2f}\n\n"
+                f"Para agregar al carrito, escribe: *'comprar {clave}'*" + pie_navegacion())
 
-    # ============================================================
-    # CASO 4: MENSAJE NO RECONOCIDO
-    # ============================================================
+    # --- Mensaje no reconocido ---
     return (f"Lo siento, no entendí tu mensaje, {estado['nombre']}. 🤔\n\n"
             "Puedes:\n"
-            "• Escribir el *nombre de un producto* (ej. 'varilla', 'cemento', 'pintura').\n"
-            "• Usar comandos: *dirección*, *horario*, *asesor*.\n"
-            "• Iniciar una compra: *'comprar varilla'*.\n\n"
-            "¿Qué deseas hacer?")
+            "• Escribir el *nombre de un producto* (ej. 'varilla', 'cemento').\n"
+            "• Usar *'comprar [producto]'* para agregar al carrito.\n"
+            "• Comandos: *menú*, *carrito*, *vaciar*, *checkout*, *dirección*, *horario*, *asesor*." + pie_navegacion())
 
 # ============================================================
-# 4. ENDPOINT WEBHOOK PARA TWILIO
+# 5. WEBHOOK
 # ============================================================
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    # Obtener datos de Twilio
     incoming_msg = request.values.get('Body', '').strip()
     user_number = request.values.get('From', '')
-
-    # Obtener respuesta del bot
     response_text = obtener_respuesta(incoming_msg, user_number)
-
-    # Crear respuesta Twilio
     resp = MessagingResponse()
     msg = resp.message()
     msg.body(response_text)
-
     return Response(str(resp), mimetype='application/xml')
 
 # ============================================================
-# 5. INICIO DEL SERVIDOR
+# 6. INICIO
 # ============================================================
 
 if __name__ == '__main__':
